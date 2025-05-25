@@ -1,0 +1,72 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop, staging ]
+
+env:
+  AWS_REGION: us-east-1
+  S3_BUCKET: medical-billing-frontend-staging-${{ github.run_number }}
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Create staging S3 bucket
+      run: |
+        aws s3 mb s3://${{ env.S3_BUCKET }} --region ${{ env.AWS_REGION }} || true
+        aws s3api put-public-access-block \
+          --bucket ${{ env.S3_BUCKET }} \
+          --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+        aws s3 website s3://${{ env.S3_BUCKET }} --index-document index.html --error-document index.html
+
+    - name: Deploy to staging S3
+      run: |
+        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
+
+    - name: Set bucket policy
+      run: |
+        cat > bucket-policy.json << EOF
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicReadGetObject",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::${{ env.S3_BUCKET }}/*"
+                }
+            ]
+        }
+        EOF
+        aws s3api put-bucket-policy --bucket ${{ env.S3_BUCKET }} --policy file://bucket-policy.json
+
+    - name: Staging deployment summary
+      run: |
+        echo "🚀 Staging deployment completed!"
+        echo "📱 Staging URL: http://${{ env.S3_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
+        echo "🔗 This staging environment will be available for testing." 
