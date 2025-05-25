@@ -1,11 +1,19 @@
 import axios from 'axios';
 
 // API Base URL configuration
-// In development, use the proxy configured in vite.config.js
-// In production, use the environment variable or fallback to the EC2 instance
-const API_BASE_URL = import.meta.env.DEV 
-  ? '/api' // Use Vite proxy in development (proxies to localhost:5001/api)
-  : (import.meta.env.VITE_API_URL || 'https://ec2-44-211-91-81.compute-1.amazonaws.com/api');
+// In development, use localhost:5001
+// In production, use the Lambda URL
+const isProduction = import.meta.env.PROD || 
+                    (typeof window !== 'undefined' && 
+                     (window.location.hostname.includes('cloudfront.net') || 
+                      window.location.hostname.includes('amazonaws.com')));
+
+const API_BASE_URL = isProduction
+  ? 'https://phslqkfk47zphdmvbufwi3oiz40ugscg.lambda-url.us-east-1.on.aws/api' // Production - Lambda URL
+  : 'http://127.0.0.1:5001/api'; // Development - local backend
+
+console.log(`[API] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+console.log(`[API] Using API URL: ${API_BASE_URL}`);
 
 // Enable debug mode
 const DEBUG = import.meta.env.DEV || import.meta.env.VITE_DEBUG === 'true';
@@ -24,16 +32,6 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   }
 });
-
-// For browser environments, we need to handle this differently
-if (API_BASE_URL.includes('ec2-44-211-91-81.compute-1.amazonaws.com')) {
-  console.log('Setting up to ignore SSL certificate validation for EC2 endpoint');
-  // This is a workaround that might work in some modern browsers
-  // but the most reliable solution is to fix the SSL certificate on the server
-  axios.defaults.validateStatus = function () {
-    return true; // Always return true to accept all status codes
-  };
-}
 
 // Add request interceptor for debugging
 apiClient.interceptors.request.use(config => {
