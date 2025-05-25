@@ -1,0 +1,59 @@
+erDiagram
+    PATIENT ||--o{ APPOINTMENT : has
+    PROVIDER ||--o{ APPOINTMENT : conducts
+    APPOINTMENT ||--o{ SERVICE : includes
+    APPOINTMENT ||--o{ CLAIM : generates
+    CLAIM ||--o{ PAYMENT : receives
+    
+    PATIENT {
+        int id
+        string first_name
+        string last_name
+        date date_of_birth
+        string contact_info
+        string insurance_info
+    }
+    
+    PROVIDER {
+        int id
+        string first_name
+        string last_name
+        string specialty
+        string contact_info
+        string npi
+    }
+    
+    SERVICE {
+        int id
+        string name
+        string code
+        float price
+        string description
+    }
+    
+    APPOINTMENT {
+        int id
+        int patient_id
+        int provider_id
+        datetime date_time
+        string status
+        string notes
+    }
+    
+    CLAIM {
+        int id
+        int appointment_id
+        string status
+        float total_amount
+        date submission_date
+        string payer_info
+    }
+    
+    PAYMENT {
+        int id
+        int claim_id
+        float amount
+        date payment_date
+        string payment_method
+        string transaction_id
+    }

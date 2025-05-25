@@ -1,0 +1,40 @@
+flowchart TD
+    App --> Navigation
+    App --> Routes
+    
+    Routes --> HomePage
+    Routes --> PatientsSection
+    Routes --> ProvidersSection
+    Routes --> ServicesSection
+    Routes --> AppointmentsSection
+    Routes --> ClaimsSection
+    Routes --> AuditPage
+    
+    subgraph "Patients Section"
+        PatientsSection[Patients]
+        PatientsPage --> PatientDetailPage
+        PatientsPage --> PatientFormPage
+    end
+    
+    subgraph "Providers Section"
+        ProvidersSection[Providers]
+        ProvidersPage --> ProviderDetailPage
+        ProvidersPage --> ProviderFormPage
+    end
+    
+    subgraph "Services Section"
+        ServicesSection[Services]
+        ServicesPage --> ServiceFormPage
+    end
+    
+    subgraph "Appointments Section"
+        AppointmentsSection[Appointments]
+        AppointmentsPage --> AppointmentDetailPage
+        AppointmentsPage --> AppointmentFormPage
+    end
+    
+    subgraph "Claims Section"
+        ClaimsSection[Claims]
+        ClaimsPage --> ClaimDetailPage
+        ClaimsPage --> ClaimFormPage
+    end

@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant UI as React UI
+    participant APIClient as API Client
+    participant Backend as Backend API
+    participant DB as Database
+    
+    UI->>APIClient: Make API request
+    APIClient->>APIClient: Add headers & intercept request
+    APIClient->>Backend: Send HTTP request
+    Backend->>DB: Query/Update data
+    DB->>Backend: Return data
+    Backend->>APIClient: HTTP Response
+    APIClient->>APIClient: Intercept response
+    APIClient->>UI: Return processed data

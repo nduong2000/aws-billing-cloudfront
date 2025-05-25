@@ -1,0 +1,21 @@
+flowchart TB
+    subgraph "Development"
+        LocalDev[Local Development]
+        GitRepo[GitHub Repository]
+    end
+    
+    subgraph "CI/CD Pipeline"
+        GitRepo --> AmplifyBuild[AWS Amplify Build]
+        AmplifyBuild --> AmplifyDeploy[AWS Amplify Deploy]
+    end
+    
+    subgraph "Hosting Environment"
+        AmplifyDeploy --> S3[S3 Storage]
+        S3 --> CloudFront[CloudFront CDN]
+        EC2[EC2 Instance] --> APIBackend[API Backend]
+        APIBackend --> Database[(Database)]
+    end
+    
+    CloudFront --> EndUsers[End Users]
+    EndUsers --> CloudFront
+    CloudFront --> EC2

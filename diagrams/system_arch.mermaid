@@ -1,0 +1,28 @@
+flowchart TB
+    subgraph "Frontend (React)"
+        UI[UI Components]
+        Pages[Pages]
+        APIService[API Service]
+    end
+    
+    subgraph "AWS Cloud"
+        CloudFront[CloudFront Distribution]
+        EC2[EC2 Instance]
+        subgraph "API Backend"
+            APIServer[API Server]
+            DB[(Database)]
+        end
+        subgraph "AWS Services"
+            Amplify[AWS Amplify]
+            S3[S3 Bucket]
+        end
+    end
+    
+    UI --> Pages
+    Pages --> APIService
+    APIService --> CloudFront
+    CloudFront --> EC2
+    EC2 --> APIServer
+    APIServer --> DB
+    Amplify --> S3
+    S3 --> CloudFront

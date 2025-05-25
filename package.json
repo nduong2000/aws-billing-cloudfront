@@ -1,0 +1,34 @@
+{
+  "name": "medical-billing-frontend",
+  "description": "Frontend application for medical billing management system",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "deploy": "./deploy.sh",
+    "deploy:build": "npm run build && aws s3 sync dist/ s3://medical-billing-frontend --delete",
+    "deploy:invalidate": "aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths '/*'"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.26.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "vite": "^4.5.0"
+  }
+}
