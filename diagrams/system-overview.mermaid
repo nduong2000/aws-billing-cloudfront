@@ -1,0 +1,182 @@
+graph TB
+    %% User Layer
+    subgraph "User Layer"
+        User[👤 End User<br/>Medical Staff]
+        Admin[👨‍💼 System Admin]
+    end
+
+    %% Frontend Infrastructure
+    subgraph "Frontend Infrastructure (AWS)"
+        CF[☁️ CloudFront<br/>d27z0qz3ducsem.cloudfront.net]
+        S3[🪣 S3 Bucket<br/>medical-billing-frontend-v2-20250526]
+        Route53[🌐 Route 53<br/>DNS Management]
+    end
+
+    %% Frontend Application
+    subgraph "React Frontend Application"
+        ReactApp[⚛️ React SPA<br/>Medical Billing UI]
+        Router[🛣️ React Router<br/>Client-side Routing]
+
+        subgraph "Core Pages"
+            HomePage[🏠 Home Dashboard]
+            PatientsPage[👥 Patient Management]
+            ProvidersPage[🏥 Provider Management]
+            ClaimsPage[📋 Claims Processing]
+            AuditPage[🔍 AI Audit System]
+        end
+
+        subgraph "Form Pages"
+            PatientForms[📝 Patient Forms]
+            ClaimForms[📝 Claim Forms]
+            AppointmentForms[📝 Appointment Forms]
+        end
+    end
+
+    %% API Gateway Layer
+    subgraph "API Layer"
+        ALB[⚖️ Application Load Balancer]
+        APIGateway[🚪 API Gateway<br/>REST Endpoints]
+    end
+
+    %% Backend Infrastructure
+    subgraph "Backend Infrastructure (AWS)"
+        Lambda[🚀 AWS Lambda<br/>Python FastAPI Container]
+        ECR[📦 Amazon ECR<br/>Container Registry]
+        CloudWatch[📊 CloudWatch<br/>Logs & Monitoring]
+    end
+
+    %% Backend Application
+    subgraph "FastAPI Backend Application"
+        FastAPI[⚡ FastAPI App<br/>Medical Billing API]
+
+        subgraph "API Routes"
+            PatientAPI[👥 /api/patients]
+            ProviderAPI[🏥 /api/providers]
+            ClaimAPI[📋 /api/claims]
+            PaymentAPI[💳 /api/payments]
+            AuditAPI[🔍 /api/audit]
+            OllamaAPI[🤖 /api/ollama]
+        end
+
+        subgraph "Core Services"
+            AuthService[🔐 Authentication]
+            ValidationService[✅ Data Validation]
+            BusinessLogic[🧠 Business Logic]
+        end
+    end
+
+    %% Database Layer
+    subgraph "Database Layer"
+        PostgreSQL[(🐘 PostgreSQL<br/>Primary Database)]
+
+        subgraph "Database Tables"
+            PatientsDB[👥 patients]
+            ProvidersDB[🏥 providers]
+            ClaimsDB[📋 claims]
+            PaymentsDB[💳 payments]
+            AuditDB[🔍 audit_logs]
+        end
+    end
+
+    %% AI Services
+    subgraph "AI & ML Services"
+        Ollama[🤖 Ollama LLM<br/>Local AI Server]
+        Bedrock[🧠 AWS Bedrock<br/>Claude/GPT Models]
+        FraudDetection[🚨 Fraud Detection<br/>Pattern Analysis]
+    end
+
+    %% External Services
+    subgraph "External Integrations"
+        InsuranceAPIs[🏢 Insurance APIs<br/>Eligibility & Claims]
+        PaymentGateways[💰 Payment Gateways<br/>Stripe/Square]
+        HL7[📡 HL7 FHIR<br/>Healthcare Standards]
+    end
+
+    %% CI/CD Pipeline
+    subgraph "CI/CD Pipeline"
+        GitHubFE[📚 Frontend Repo<br/>aws-billing-cloudfront]
+        GitHubBE[📚 Backend Repo<br/>aws-billing-backend-lambda]
+        ActionsFE[⚙️ Frontend Actions<br/>Build & Deploy to S3]
+        ActionsBE[⚙️ Backend Actions<br/>Build & Deploy to Lambda]
+    end
+
+    %% User Flow
+    User --> CF
+    Admin --> CF
+    CF --> S3
+    S3 --> ReactApp
+    ReactApp --> Router
+    Router --> HomePage
+    Router --> PatientsPage
+    Router --> ProvidersPage
+    Router --> ClaimsPage
+    Router --> AuditPage
+
+    %% Frontend to Backend Communication
+    ReactApp --> ALB
+    ALB --> Lambda
+    Lambda --> FastAPI
+
+    %% API Routing
+    FastAPI --> PatientAPI
+    FastAPI --> ProviderAPI
+    FastAPI --> ClaimAPI
+    FastAPI --> PaymentAPI
+    FastAPI --> AuditAPI
+    FastAPI --> OllamaAPI
+
+    %% Backend to Database
+    PatientAPI --> PostgreSQL
+    ProviderAPI --> PostgreSQL
+    ClaimAPI --> PostgreSQL
+    PaymentAPI --> PostgreSQL
+    AuditAPI --> PostgreSQL
+
+    %% Database Tables
+    PostgreSQL --> PatientsDB
+    PostgreSQL --> ProvidersDB
+    PostgreSQL --> ClaimsDB
+    PostgreSQL --> PaymentsDB
+    PostgreSQL --> AuditDB
+
+    %% AI Integration
+    AuditAPI --> Ollama
+    AuditAPI --> Bedrock
+    ClaimAPI --> FraudDetection
+
+    %% External Integrations
+    ClaimAPI --> InsuranceAPIs
+    PaymentAPI --> PaymentGateways
+    PatientAPI --> HL7
+
+    %% CI/CD Flow
+    GitHubFE --> ActionsFE
+    GitHubBE --> ActionsBE
+    ActionsFE --> S3
+    ActionsBE --> ECR
+    ECR --> Lambda
+
+    %% Monitoring
+    Lambda --> CloudWatch
+    FastAPI --> CloudWatch
+
+    %% Styling
+    classDef user fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
+    classDef aws fill:#ff9900,stroke:#232f3e,stroke-width:2px,color:#fff
+    classDef react fill:#61dafb,stroke:#20232a,stroke-width:2px,color:#20232a
+    classDef api fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    classDef python fill:#3776ab,stroke:#ffd43b,stroke-width:2px,color:#fff
+    classDef database fill:#336791,stroke:#ffffff,stroke-width:2px,color:#fff
+    classDef ai fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
+    classDef external fill:#795548,stroke:#3e2723,stroke-width:2px,color:#fff
+    classDef cicd fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    classDef monitoring fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#fff
+
+    class User,Admin user
+    class CF,S3,Route53,ALB,APIGateway,Lambda,ECR,CloudWatch aws
+    class ReactApp,Router,HomePage,PatientsPage,ProvidersPage,ClaimsPage,AuditPage,PatientForms,ClaimForms,AppointmentForms react
+    class FastAPI,PatientAPI,ProviderAPI,ClaimAPI,PaymentAPI,AuditAPI,OllamaAPI,AuthService,ValidationService,BusinessLogic python
+    class PostgreSQL,PatientsDB,ProvidersDB,ClaimsDB,PaymentsDB,AuditDB database
+    class Ollama,Bedrock,FraudDetection ai
+    class InsuranceAPIs,PaymentGateways,HL7 external
+    class GitHubFE,GitHubBE,ActionsFE,ActionsBE cicd

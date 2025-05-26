@@ -1,0 +1,79 @@
+graph TB
+    %% User and External Access
+    User[👤 User] --> CF[☁️ CloudFront Distribution<br/>d27z0qz3ducsem.cloudfront.net]
+
+    %% CloudFront Configuration
+    CF --> |Cache Miss| S3[🪣 S3 Bucket<br/>medical-billing-frontend-v2-20250526]
+    CF --> |Cache Hit| Cache[💾 CloudFront Cache<br/>HTML: no-cache<br/>Assets: 5min cache]
+
+    %% S3 Static Website
+    S3 --> |Serves| StaticFiles[📁 Static Files<br/>index.html<br/>assets/index-*.js<br/>assets/index-*.css]
+
+    %% React Application Structure
+    subgraph "React Application"
+        App[⚛️ App.jsx<br/>Main Router] --> Nav[🧭 Navigation Component]
+        App --> Routes[🛣️ React Router]
+
+        Routes --> Home[🏠 HomePage]
+        Routes --> Patients[👥 PatientsPage]
+        Routes --> Providers[🏥 ProvidersPage]
+        Routes --> Services[🔧 ServicesPage]
+        Routes --> Appointments[📅 AppointmentsPage]
+        Routes --> Claims[📋 ClaimsPage]
+        Routes --> Audit[🔍 AuditPage]
+        Routes --> Test[🧪 SimpleOllamaTest]
+
+        %% Detail and Form Pages
+        Patients --> PatientDetail[👤 PatientDetailPage]
+        Patients --> PatientForm[📝 PatientFormPage]
+        Providers --> ProviderDetail[🏥 ProviderDetailPage]
+        Providers --> ProviderForm[📝 ProviderFormPage]
+        Services --> ServiceForm[📝 ServiceFormPage]
+        Appointments --> AppointmentDetail[📅 AppointmentDetailPage]
+        Appointments --> AppointmentForm[📝 AppointmentFormPage]
+        Claims --> ClaimDetail[📋 ClaimDetailPage]
+        Claims --> ClaimForm[📝 ClaimFormPage]
+    end
+
+    %% API Communication
+    subgraph "API Layer"
+        APIService[🔌 API Services<br/>src/services/]
+        APIService --> Backend[🚀 Lambda Backend<br/>FastAPI + Mangum]
+    end
+
+    %% Connect React to API
+    Home -.-> APIService
+    Patients -.-> APIService
+    Providers -.-> APIService
+    Services -.-> APIService
+    Appointments -.-> APIService
+    Claims -.-> APIService
+    Audit -.-> APIService
+    Test -.-> APIService
+
+    %% CI/CD Pipeline
+    subgraph "CI/CD Pipeline"
+        GitHub[📚 GitHub Repository<br/>aws-billing-cloudfront] --> Actions[⚙️ GitHub Actions<br/>deploy.yml]
+        Actions --> Build[🔨 npm run build<br/>Vite Build Process]
+        Build --> Deploy[🚀 Deploy to S3<br/>aws s3 sync]
+        Deploy --> Invalidate[🔄 CloudFront Invalidation<br/>Cache Refresh]
+    end
+
+    %% Development Flow
+    Dev[👨‍💻 Developer] --> |git push| GitHub
+    GitHub --> |Triggers| Actions
+    Actions --> |Updates| S3
+    Invalidate --> |Refreshes| CF
+
+    %% Styling
+    classDef aws fill:#ff9900,stroke:#232f3e,stroke-width:2px,color:#fff
+    classDef react fill:#61dafb,stroke:#20232a,stroke-width:2px,color:#20232a
+    classDef api fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    classDef cicd fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    classDef user fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
+
+    class CF,S3,Cache aws
+    class App,Nav,Routes,Home,Patients,Providers,Services,Appointments,Claims,Audit,Test,PatientDetail,PatientForm,ProviderDetail,ProviderForm,ServiceForm,AppointmentDetail,AppointmentForm,ClaimDetail,ClaimForm react
+    class APIService,Backend api
+    class GitHub,Actions,Build,Deploy,Invalidate cicd
+    class User,Dev user

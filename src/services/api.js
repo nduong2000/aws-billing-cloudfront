@@ -159,9 +159,28 @@ export const updateClaim = (id, data) => put(`/claims/${id}`, data);
 export const deleteClaim = (id) => del(`/claims/${id}`);
 
 // Audit-specific function
-export const auditClaim = (id, data) => {
+export const auditClaim = async (id, data) => {
   logDebug(`Special audit request debug for claim ${id}`, data);
-  return post(`/claims/${id}/audit`, data);
+  
+  // Extract model_id from data to pass as query parameter
+  const { model_id, ...bodyData } = data || {};
+  const params = {};
+  
+  if (model_id) {
+    params.model_id = model_id;
+    logDebug(`Using model_id as query parameter: ${model_id}`);
+  }
+  
+  try {
+    logDebug(`Starting POST request to /claims/${id}/audit with params`, params);
+    const response = await apiClient.post(`/claims/${id}/audit`, bodyData, { params });
+    logDebug(`POST /claims/${id}/audit successful`, { status: response.status, data: response.data });
+    return response.data;
+  } catch (error) {
+    logDebug(`POST /claims/${id}/audit failed`, error.response?.data || error.message);
+    console.error(`POST /claims/${id}/audit failed:`, error.response || error.message);
+    throw error;
+  }
 };
 
 // Payments (Note: create usually nested under claim)

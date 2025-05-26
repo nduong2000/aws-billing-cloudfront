@@ -1,0 +1,120 @@
+graph TB
+    %% External Access
+    Frontend[🌐 Frontend<br/>CloudFront/React] --> ALB[⚖️ Application Load Balancer<br/>or API Gateway]
+    ALB --> Lambda[🚀 AWS Lambda<br/>Python FastAPI + Mangum]
+
+    %% Lambda Function Structure
+    subgraph "Lambda Function"
+        LambdaHandler[📋 lambda_function.py<br/>Main Handler] --> FastAPI[⚡ FastAPI Application<br/>Medical Billing API]
+        FastAPI --> CORS[🔒 CORS Middleware<br/>Multi-origin Support]
+        FastAPI --> Routes[🛣️ API Routes]
+
+        %% Route Modules
+        Routes --> PatientRoutes[👥 patient_routes.py<br/>/api/patients]
+        Routes --> ProviderRoutes[🏥 provider_routes.py<br/>/api/providers]
+        Routes --> ServiceRoutes[🔧 service_routes.py<br/>/api/services]
+        Routes --> AppointmentRoutes[📅 appointment_routes.py<br/>/api/appointments]
+        Routes --> ClaimRoutes[📋 claim_routes.py<br/>/api/claims]
+        Routes --> PaymentRoutes[💳 payment_routes.py<br/>/api/payments]
+        Routes --> AuditRoutes[🔍 audit_routes.py<br/>/api/audit]
+        Routes --> OllamaRoutes[🤖 ollama_routes.py<br/>/api/ollama]
+
+        %% Health and Legacy
+        Routes --> Health[❤️ Health Check<br/>/health]
+        Routes --> Legacy[🔄 Legacy Endpoints<br/>/legacy/*]
+    end
+
+    %% Database Layer
+    subgraph "Database Layer"
+        DBConfig[⚙️ config/db.py<br/>Connection Manager] --> PostgreSQL[(🐘 PostgreSQL<br/>Medical Billing DB)]
+        DBInit[🔧 config/db_init.py<br/>Schema Initialization] --> PostgreSQL
+
+        %% Database Tables
+        PostgreSQL --> Tables[📊 Database Tables]
+        Tables --> PatientsTable[👥 patients]
+        Tables --> ProvidersTable[🏥 providers]
+        Tables --> ServicesTable[🔧 services]
+        Tables --> AppointmentsTable[📅 appointments]
+        Tables --> ClaimsTable[📋 claims]
+        Tables --> PaymentsTable[💳 payments]
+        Tables --> AuditTable[🔍 audit_logs]
+    end
+
+    %% AI Integration
+    subgraph "AI Services"
+        OllamaRoutes --> OllamaAPI[🤖 Ollama API<br/>Local LLM Server]
+        AuditRoutes --> BedrockAPI[🧠 AWS Bedrock<br/>Claude/GPT Models]
+        OllamaAPI --> AIModels[🎯 AI Models<br/>Llama, Mistral, etc.]
+        BedrockAPI --> ClaudeModel[🤖 Claude Model<br/>Claim Analysis]
+    end
+
+    %% Connect Routes to Database
+    PatientRoutes -.-> DBConfig
+    ProviderRoutes -.-> DBConfig
+    ServiceRoutes -.-> DBConfig
+    AppointmentRoutes -.-> DBConfig
+    ClaimRoutes -.-> DBConfig
+    PaymentRoutes -.-> DBConfig
+    AuditRoutes -.-> DBConfig
+
+    %% External Integrations
+    subgraph "External Services"
+        ClaimRoutes --> InsuranceAPI[🏢 Insurance APIs<br/>Eligibility & Claims]
+        PaymentRoutes --> PaymentGateway[💰 Payment Gateway<br/>Stripe/Square]
+        AuditRoutes --> FraudDetection[🚨 Fraud Detection<br/>Pattern Analysis]
+    end
+
+    %% CI/CD Pipeline
+    subgraph "CI/CD Pipeline"
+        BackendRepo[📚 GitHub Repository<br/>aws-billing-backend-lambda] --> BackendActions[⚙️ GitHub Actions<br/>Lambda Deploy]
+        BackendActions --> DockerBuild[🐳 Docker Build<br/>Container Image]
+        DockerBuild --> ECR[📦 Amazon ECR<br/>Container Registry]
+        ECR --> LambdaDeploy[🚀 Lambda Deployment<br/>Container Update]
+        LambdaDeploy --> Lambda
+    end
+
+    %% Environment Configuration
+    subgraph "Configuration"
+        EnvVars[🔧 Environment Variables<br/>.env / Lambda Config]
+        Secrets[🔐 AWS Secrets Manager<br/>DB Credentials]
+        IAMRoles[👤 IAM Roles<br/>Lambda Execution Role]
+    end
+
+    EnvVars --> Lambda
+    Secrets --> Lambda
+    IAMRoles --> Lambda
+
+    %% Development Flow
+    BackendDev[👨‍💻 Backend Developer] --> |git push| BackendRepo
+    BackendRepo --> |Triggers| BackendActions
+    LambdaDeploy --> |Updates| Lambda
+
+    %% Monitoring and Logging
+    subgraph "Monitoring"
+        CloudWatch[📊 CloudWatch Logs<br/>Lambda Logs]
+        XRay[🔍 AWS X-Ray<br/>Distributed Tracing]
+        Metrics[📈 CloudWatch Metrics<br/>Performance Monitoring]
+    end
+
+    Lambda --> CloudWatch
+    Lambda --> XRay
+    Lambda --> Metrics
+
+    %% Styling
+    classDef aws fill:#ff9900,stroke:#232f3e,stroke-width:2px,color:#fff
+    classDef python fill:#3776ab,stroke:#ffd43b,stroke-width:2px,color:#fff
+    classDef database fill:#336791,stroke:#ffffff,stroke-width:2px,color:#fff
+    classDef ai fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
+    classDef external fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    classDef cicd fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    classDef config fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
+    classDef monitoring fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#fff
+
+    class ALB,Lambda,ECR,LambdaDeploy,CloudWatch,XRay,Metrics,IAMRoles,Secrets aws
+    class LambdaHandler,FastAPI,CORS,Routes,PatientRoutes,ProviderRoutes,ServiceRoutes,AppointmentRoutes,ClaimRoutes,PaymentRoutes,AuditRoutes,OllamaRoutes,Health,Legacy,DBConfig,DBInit python
+    class PostgreSQL,Tables,PatientsTable,ProvidersTable,ServicesTable,AppointmentsTable,ClaimsTable,PaymentsTable,AuditTable database
+    class OllamaAPI,BedrockAPI,AIModels,ClaudeModel ai
+    class InsuranceAPI,PaymentGateway,FraudDetection external
+    class BackendRepo,BackendActions,DockerBuild cicd
+    class EnvVars config
+    class CloudWatch,XRay,Metrics monitoring
