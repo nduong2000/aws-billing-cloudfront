@@ -48,6 +48,24 @@ jobs:
         EOF
         chmod 600 ~/.aws/credentials ~/.aws/config
 
+    - name: Deep debug AWS credentials
+      run: |
+        echo "=== AWS Credential Debug ==="
+        echo "Access Key ID length: ${#AWS_ACCESS_KEY_ID}"
+        echo "Secret Key length: ${#AWS_SECRET_ACCESS_KEY}"
+        echo "Access Key starts with: ${AWS_ACCESS_KEY_ID:0:4}"
+        echo "Access Key ends with: ${AWS_ACCESS_KEY_ID: -4}"
+        echo "Access Key ID (hex dump first 20 chars):"
+        echo "$AWS_ACCESS_KEY_ID" | head -c 20 | xxd
+        echo "=== Testing different regions ==="
+        AWS_DEFAULT_REGION=us-east-1 aws sts get-caller-identity || echo "us-east-1 failed"
+        AWS_DEFAULT_REGION=us-west-2 aws sts get-caller-identity || echo "us-west-2 failed"
+        echo "=== AWS CLI version ==="
+        aws --version
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
     - name: Test AWS credentials
       run: |
         echo "Testing AWS credentials..."
