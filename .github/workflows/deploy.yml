@@ -161,4 +161,4 @@ jobs:
           echo "🌐 CloudFront: https://$CLOUDFRONT_DOMAIN"
           echo ""
         fi
-        echo "✨ Your Medical Billing Frontend is now live! ✨"
+        echo "✨ Your Medical Billing Frontend is now live!! ✨"
