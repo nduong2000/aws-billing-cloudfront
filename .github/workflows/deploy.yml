@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  S3_BUCKET: medical-billing-frontend-${{ github.run_number }}
+  S3_BUCKET: medical-billing-frontend-v2-20250526
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
 
 jobs:
@@ -54,67 +54,72 @@ jobs:
         aws sts get-caller-identity
         echo "AWS credentials working! ✅"
 
-    - name: Configure existing S3 bucket
+    - name: Create and configure new S3 bucket
       run: |
-        echo "Configuring existing S3 bucket: ${{ env.S3_BUCKET }}"
+        echo "Creating new S3 bucket: ${{ env.S3_BUCKET }}"
+        
+        # Create bucket (ignore error if exists)
+        aws s3 mb s3://${{ env.S3_BUCKET }} --region ${{ env.AWS_REGION }} || echo "Bucket may already exist"
         
         # Configure bucket for static website hosting
         aws s3 website s3://${{ env.S3_BUCKET }} \
           --index-document index.html \
           --error-document index.html
         
-        echo "S3 bucket configured successfully! ✅"
-
-    - name: Deploy to S3
-      run: |
-        echo "Deploying files to S3..."
+        # Set bucket policy for public read access
+        cat > bucket-policy.json << EOF
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicReadGetObject",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::${{ env.S3_BUCKET }}/*"
+                }
+            ]
+        }
+        EOF
         
-        # Sync static assets with long cache
+        aws s3api put-bucket-policy --bucket ${{ env.S3_BUCKET }} --policy file://bucket-policy.json
+        rm bucket-policy.json
+        
+        echo "S3 bucket ${{ env.S3_BUCKET }} configured successfully! ✅"
+
+    - name: Deploy to S3 with better cache control
+      run: |
+        echo "Deploying files to S3 bucket: ${{ env.S3_BUCKET }}"
+        
+        # Upload all files with short cache for development (5 minutes)
         aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
           --delete \
-          --cache-control "max-age=31536000,public,immutable" \
-          --exclude "*.html" \
-          --exclude "*.json"
+          --cache-control "max-age=300,public" \
+          --exclude "*.html"
         
-        # Sync HTML files with no cache
+        # Upload HTML files with no cache
         aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
           --delete \
           --cache-control "max-age=0,no-cache,no-store,must-revalidate" \
           --include "*.html"
         
-        # Sync manifest and config files with short cache
-        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
-          --delete \
-          --cache-control "max-age=300,public" \
-          --include "*.json"
-        
         echo "Files deployed to S3 successfully! ✅"
 
-    - name: Invalidate CloudFront cache
+    - name: Invalidate CloudFront cache (if distribution exists)
       run: |
-        echo "Invalidating CloudFront cache..."
-        INVALIDATION_ID=$(aws cloudfront create-invalidation \
-          --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
-          --paths "/*" \
-          --query 'Invalidation.Id' \
-          --output text)
-        
-        echo "Invalidation ID: $INVALIDATION_ID"
-        echo "CloudFront cache invalidation started! ✅"
-        
-        # Additional aggressive invalidation for edge cases
-        echo "Creating additional invalidation for specific assets..."
-        ADDITIONAL_INVALIDATION_ID=$(aws cloudfront create-invalidation \
-          --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
-          --paths "/index.html" "/assets/*" \
-          --query 'Invalidation.Id' \
-          --output text)
-        
-        echo "Additional invalidation ID: $ADDITIONAL_INVALIDATION_ID"
-        echo "Additional invalidation created! ✅"
-        echo ""
-        echo "⏳ Note: Cache invalidation takes 2-5 minutes to propagate globally"
-        echo "🔄 If changes don't appear immediately, try hard refresh (Ctrl+F5)"
+        if [ -n "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+          echo "Invalidating CloudFront cache..."
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "Invalidation ID: $INVALIDATION_ID"
+          echo "CloudFront cache invalidation started! ✅"
+        else
+          echo "No CloudFront distribution ID provided, skipping invalidation"
+        fi
 
     - name: Deploy summary
       run: |
@@ -130,4 +135,7 @@ jobs:
           echo "🌐 CloudFront: https://$CLOUDFRONT_DOMAIN"
           echo ""
         fi
-        echo "✨ Your Medical Billing Frontend is now live!!! ✨"
+        echo "✨ Your Medical Billing Frontend is now live with navigation!!! ✨"
+        echo ""
+        echo "🔗 Test the new deployment:"
+        echo "   S3 Direct: http://${{ env.S3_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
