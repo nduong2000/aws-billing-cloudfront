@@ -100,26 +100,21 @@ jobs:
           --output text)
         
         echo "Invalidation ID: $INVALIDATION_ID"
-        echo "Waiting for invalidation to complete..."
-        
-        # Wait for invalidation to complete (max 10 minutes)
-        aws cloudfront wait invalidation-completed \
-          --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
-          --id $INVALIDATION_ID \
-          --cli-read-timeout 600 \
-          --cli-connect-timeout 60
-        
-        echo "CloudFront cache invalidated and completed! ✅"
+        echo "CloudFront cache invalidation started! ✅"
         
         # Additional aggressive invalidation for edge cases
         echo "Creating additional invalidation for specific assets..."
-        aws cloudfront create-invalidation \
+        ADDITIONAL_INVALIDATION_ID=$(aws cloudfront create-invalidation \
           --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
           --paths "/index.html" "/assets/*" \
           --query 'Invalidation.Id' \
-          --output text
+          --output text)
         
+        echo "Additional invalidation ID: $ADDITIONAL_INVALIDATION_ID"
         echo "Additional invalidation created! ✅"
+        echo ""
+        echo "⏳ Note: Cache invalidation takes 2-5 minutes to propagate globally"
+        echo "🔄 If changes don't appear immediately, try hard refresh (Ctrl+F5)"
 
     - name: Deploy summary
       run: |
