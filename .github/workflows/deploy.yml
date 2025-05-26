@@ -3,12 +3,10 @@ name: Deploy Medical Billing Frontend to AWS CloudFront
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 env:
   AWS_REGION: us-east-1
-  S3_BUCKET: medical-billing-frontend-202505251250
+  S3_BUCKET: medical-billing-frontend-${{ github.ref_name }}-${{ github.run_number }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
 
 jobs:
@@ -41,20 +39,99 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Test AWS credentials
+      run: |
+        echo "Testing AWS credentials..."
+        aws sts get-caller-identity
+        echo "AWS credentials working! ✅"
+
+    - name: Create and configure S3 bucket
+      run: |
+        echo "Creating S3 bucket: ${{ env.S3_BUCKET }}"
+        
+        # Create bucket if it doesn't exist
+        aws s3 mb s3://${{ env.S3_BUCKET }} --region ${{ env.AWS_REGION }} || true
+        
+        # Wait a moment for bucket creation to propagate
+        sleep 5
+        
+        # Configure bucket for static website hosting
+        aws s3 website s3://${{ env.S3_BUCKET }} \
+          --index-document index.html \
+          --error-document index.html
+        
+        # Set public access block configuration
+        aws s3api put-public-access-block \
+          --bucket ${{ env.S3_BUCKET }} \
+          --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+        
+        # Create and apply bucket policy for public read access
+        cat > bucket-policy.json << EOF
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicReadGetObject",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::${{ env.S3_BUCKET }}/*"
+                }
+            ]
+        }
+        EOF
+        
+        # Apply bucket policy
+        aws s3api put-bucket-policy --bucket ${{ env.S3_BUCKET }} --policy file://bucket-policy.json
+        
+        echo "S3 bucket configured successfully! ✅"
+
     - name: Deploy to S3
       run: |
-        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete --cache-control "max-age=31536000" --exclude "*.html"
-        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete --cache-control "max-age=0, no-cache, no-store, must-revalidate" --include "*.html"
+        echo "Deploying files to S3..."
+        
+        # Sync static assets with long cache
+        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
+          --delete \
+          --cache-control "max-age=31536000,public,immutable" \
+          --exclude "*.html" \
+          --exclude "*.json"
+        
+        # Sync HTML files with no cache
+        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
+          --delete \
+          --cache-control "max-age=0,no-cache,no-store,must-revalidate" \
+          --include "*.html"
+        
+        # Sync manifest and config files with short cache
+        aws s3 sync dist/ s3://${{ env.S3_BUCKET }} \
+          --delete \
+          --cache-control "max-age=300,public" \
+          --include "*.json"
+        
+        echo "Files deployed to S3 successfully! ✅"
 
     - name: Invalidate CloudFront cache
       if: env.CLOUDFRONT_DISTRIBUTION_ID != ''
       run: |
-        aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+        echo "Invalidating CloudFront cache..."
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+          --paths "/*"
+        echo "CloudFront cache invalidated! ✅"
 
     - name: Deploy summary
       run: |
+        echo ""
         echo "🎉 Deployment completed successfully!"
+        echo ""
+        echo "📦 S3 Bucket: ${{ env.S3_BUCKET }}"
         echo "📱 S3 Website: http://${{ env.S3_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
+        echo "🌍 Region: ${{ env.AWS_REGION }}"
+        echo ""
         if [ -n "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
-          echo "🌐 CloudFront: https://$(aws cloudfront get-distribution --id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --query 'Distribution.DomainName' --output text)"
-        fi 
+          CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution --id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --query 'Distribution.DomainName' --output text)
+          echo "🌐 CloudFront: https://$CLOUDFRONT_DOMAIN"
+          echo ""
+        fi
+        echo "✨ Your Medical Billing Frontend is now live! ✨"
